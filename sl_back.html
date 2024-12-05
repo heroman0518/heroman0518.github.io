@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杠杆与收益计算器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .form-container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .results {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>杠杆与收益计算器</h1>
+    <div class="form-container">
+        <form id="calculator">
+            <label>
+                开仓价格 (USD):
+                <input type="number" id="openingPrice" step="0.01" required>
+            </label>
+            <label>
+                止盈价格 (USD):
+                <input type="number" id="takeProfitPrice" step="0.01" required>
+            </label>
+            <label>
+                止损价格 (USD):
+                <input type="number" id="stopLossPrice" step="0.01" required>
+            </label>
+            <label>
+                损失金额 (USD):
+                <input type="number" id="lossAmount" step="0.01" required>
+            </label>
+            <label>
+                选择交易方向：
+                <select id="tradeDirection">
+                    <option value="long">做多</option>
+                    <option value="short">卖空</option>
+                </select>
+            </label>
+            <button type="button" onclick="calculate()">计算</button>
+        </form>
+    </div>
+    <div id="results" class="results"></div>
+
+    <script>
+        function calculate() {
+            const openingPrice = parseFloat(document.getElementById("openingPrice").value);
+            const takeProfitPrice = parseFloat(document.getElementById("takeProfitPrice").value);
+            const stopLossPrice = parseFloat(document.getElementById("stopLossPrice").value);
+            const lossAmount = parseFloat(document.getElementById("lossAmount").value);
+            const tradeDirection = document.getElementById("tradeDirection").value;
+
+            // 验证输入
+            if (isNaN(openingPrice) || isNaN(takeProfitPrice) || isNaN(stopLossPrice) || isNaN(lossAmount)) {
+                alert("请输入有效的数字！");
+                return;
+            }
+
+            const priceDifference = openingPrice - stopLossPrice;
+            const marginLeverageRelation = lossAmount / priceDifference * openingPrice;
+            let optimalLeverage, optimalMargin, optimalProfitRatio, optimalLiquidationPrice, profitAmount, contractQuantity;
+
+            // 根据做多还是做空调整方向
+            const isLong = tradeDirection === "long";
+
+            // 做空时止盈和止损方向相反
+            const priceDiff = isLong ? takeProfitPrice - openingPrice : openingPrice - takeProfitPrice;
+            const stopLossDiff = isLong ? stopLossPrice - openingPrice : openingPrice - stopLossPrice;
+
+            for (let leverage = 1; leverage <= 100; leverage++) {
+                const margin = marginLeverageRelation / leverage;
+                const liquidationPrice = isLong
+                    ? openingPrice - (margin / leverage)
+                    : openingPrice + (margin / leverage);
+
+                if (margin > 0 && liquidationPrice > stopLossPrice) {
+                    optimalLeverage = leverage;
+                    optimalMargin = margin;
+                    optimalProfitRatio = (priceDiff * leverage / openingPrice) * 100;
+
+                    // 计算仓量：仓量 = 保证金 * 杠杆 / 开仓价格
+                    contractQuantity = margin * leverage / openingPrice;
+
+                    profitAmount = priceDiff * contractQuantity;
+                    optimalLiquidationPrice = liquidationPrice;
+                    break;
+                }
+            }
+
+            const resultsDiv = document.getElementById("results");
+            if (optimalLeverage) {
+                resultsDiv.innerHTML = `
+                    <h2>计算结果</h2>
+                    <p><strong>杠杆:</strong> ${optimalLeverage}x</p>
+                    <p><strong>保证金:</strong> ${optimalMargin.toFixed(2)} USD</p>
+                    <p><strong>收益率:</strong> ${optimalProfitRatio.toFixed(2)}%</p>
+                    <p><strong>强平价格:</strong> ${optimalLiquidationPrice.toFixed(2)} USD</p>
+                    <p><strong>收益额:</strong> ${profitAmount.toFixed(2)} USD</p>
+                    <p><strong>仓量:</strong> ${contractQuantity.toFixed(2)} 合约</p>
+                `;
+            } else {
+                resultsDiv.innerHTML = "<p>无法找到合适的杠杆和保证金组合。</p>";
+            }
+        }
+    </script>
+</body>
+</html>
