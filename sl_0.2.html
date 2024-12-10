@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>做多做空计算器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            background-color: #e7f3e7;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .result p {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>test</h1>
+        
+        <label for="direction">交易方向</label>
+        <select id="direction">
+            <option value="long">做多</option>
+            <option value="short">做空</option>
+        </select>
+
+        <label for="entryPrice">入场价格</label>
+        <input type="number" id="entryPrice" placeholder="输入入场价格" required>
+
+        <label for="takeProfitPrice">止盈价格</label>
+        <input type="number" id="takeProfitPrice" placeholder="输入止盈价格" required>
+
+        <label for="stopLossPrice">止损价格</label>
+        <input type="number" id="stopLossPrice" placeholder="输入止损价格" required>
+
+        <label for="quantity">仓量 (单位)</label>
+        <input type="number" id="quantity" placeholder="输入仓量" required>
+
+        <label for="expectedLoss">期望损失金额 (元)</label>
+        <input type="number" id="expectedLoss" placeholder="输入期望损失金额" required>
+
+        <label for="margin">保证金 (元)</label>
+        <input type="number" id="margin" placeholder="输入保证金" required>
+
+        <button onclick="calculate()">计算</button>
+
+        <div class="result" id="result" style="display:none;">
+            <h3>计算结果</h3>
+            <p><strong>推荐杠杆：</strong><span id="leverage"></span>x</p>
+            <p><strong>强平价格：</strong><span id="liquidationPrice"></span></p>
+            <p><strong>收益额：</strong><span id="profit"></span> 元</p>
+            <p><strong>收益率：</strong><span id="roi"></span> %</p>
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            // 获取输入值
+            let direction = document.getElementById("direction").value;
+            let entryPrice = parseFloat(document.getElementById("entryPrice").value);
+            let takeProfitPrice = parseFloat(document.getElementById("takeProfitPrice").value);
+            let stopLossPrice = parseFloat(document.getElementById("stopLossPrice").value);
+            let quantity = parseFloat(document.getElementById("quantity").value);
+            let expectedLoss = parseFloat(document.getElementById("expectedLoss").value);
+            let margin = parseFloat(document.getElementById("margin").value);
+
+            // 校验输入
+            if (isNaN(entryPrice) || isNaN(takeProfitPrice) || isNaN(stopLossPrice) || isNaN(quantity) || isNaN(expectedLoss) || isNaN(margin)) {
+                alert("请输入所有字段！");
+                return;
+            }
+
+            // 计算止损差距
+            let stopLossDifference = Math.abs(stopLossPrice - entryPrice);
+
+            // 根据期望损失金额调整仓量
+            let lossPerUnit = stopLossDifference * quantity;
+            let adjustedQuantity = (expectedLoss / lossPerUnit) * quantity;
+
+            // 计算仓位
+            let positionValue = adjustedQuantity * entryPrice;
+
+            // 计算杠杆
+            let leverage = positionValue / margin;
+
+            // 计算强平价格
+            let liquidationPrice;
+            if (direction === "long") {
+                liquidationPrice = entryPrice * (1 + (margin / positionValue));
+            } else {
+                liquidationPrice = entryPrice * (1 - (margin / positionValue));
+            }
+
+            // 计算收益额
+            let profitPerUnit = Math.abs(takeProfitPrice - entryPrice) * adjustedQuantity;
+            let roi = (profitPerUnit / (entryPrice * adjustedQuantity)) * 100;
+
+            // 显示结果
+            document.getElementById("leverage").innerText = leverage.toFixed(2);
+            document.getElementById("liquidationPrice").innerText = liquidationPrice.toFixed(2);
+            document.getElementById("profit").innerText = profitPerUnit.toFixed(2);
+            document.getElementById("roi").innerText = roi.toFixed(2);
+
+            // 显示结果框
+            document.getElementById("result").style.display = "block";
+        }
+    </script>
+</body>
+</html>
